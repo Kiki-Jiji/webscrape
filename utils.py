@@ -1,3 +1,12 @@
+from ipaddress import ip_address
+from itertools import count
+import requests
+import random
+from bs4 import BeautifulSoup
+import pandas as pd
+
+def get_child(html, pos):
+    return [i for i in html[pos].children][0]
 
 def extract_books(page):
 
@@ -37,3 +46,42 @@ def extract_books(page):
         books[book_rank_scrape] = book
 
         return books
+
+
+
+def get_free_proxies():
+
+    url = "https://free-proxy-list.net/"
+    # get the HTTP response and construct soup object
+    soup = BeautifulSoup(requests.get(url).content, "html.parser")
+    proxies = []
+
+    table = soup.find_all('tbody')
+
+    ip_addresses = [i for i in [i for i in table][0]]
+
+    rows = {}
+    count = 0
+
+    for table_row in ip_addresses:
+
+        try:
+            ip = [i for i in table_row.children]
+
+            row = {
+                'ip': get_child(ip, 0),
+                'port': get_child(ip, 1),
+                'code': get_child(ip, 2),
+                'country': get_child(ip, 3),
+                'Anonymity': get_child(ip, 4),
+                'Google': get_child(ip, 5),
+                'Https': get_child(ip, 6),
+                'last_checked': get_child(ip, 7),
+            }
+
+            rows[count] = row
+        except:
+            pass
+        count += 1
+
+    return pd.DataFrame.from_dict(rows, orient='index')

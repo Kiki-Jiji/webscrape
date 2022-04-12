@@ -1,3 +1,4 @@
+from ast import Try
 import imp
 from bs4 import BeautifulSoup
 import requests
@@ -5,8 +6,10 @@ import pandas as pd
 import gspread
 import df2gspread as d2g
 from datetime import date
+import time
+from random import random
 
-from utils import extract_books
+from utils import extract_books, get_free_proxies
 
 
 
@@ -22,21 +25,35 @@ HEADERS = {
 
 today = date.today().strftime("%d_%m_%Y")
 
-gc = gspread.service_account('webscrape-346716-8f0851ec8cad.json')
+gc = gspread.service_account("webscrape-346716-e7082b6f73c5.json")
 
 sh = gc.open("Amazon Data")
 
 
-
 urls = {
-    'all_romance': "https://www.amazon.co.uk/Best-Sellers-Books-Romance/zgbs/books/88/ref=zg_bs_unv_books_2_277563_2",
-    'historical': "https://www.amazon.co.uk/Best-Sellers-Books-Historical-Romance/zgbs/books/277831/ref=zg_bs_nav_books_2_88"
+    'UK_Hist_Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/362727031/ref=zg_bs_unv_digital-text_4_3507148031_2',
+    'UK_Reg Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Regency-Historical-Romance/zgbs/digital-text/3507148031/ref=zg_bs_nav_digital-text_4_362727031',
+    'US_Hist_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/158571011/ref=zg_bs_unv_digital-text_4_158573011_2',
+    'US_Reg_Romance' : 'https://www.amazon.com/Best-Sellers-Regency-Historical-Romance/zgbs/digital-text/158573011',
+    'UK_Womens_Fiction' : 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/4542772031/ref=zg_bs_nav_digital-text_3_362270031',
+    'UK_Womens_Romance_Fiction': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/4542787031/ref=zg_bs_nav_digital-text_4_4542772031',
+    'US_Womens_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/6190492011/ref=zg_bs_nav_digital-text_3_157028011',
+    'US_Womens_Rom_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/7588898011/ref=zg_bs_nav_digital-text_4_6190492011'
 }
+
+
+proxies = get_free_proxies()
+
+ips = proxies.ip.array
+
+proxy = ips[0]
 
 for url in urls:
     
-    webpage = requests.get(urls[url], headers=HEADERS)
-    page = BeautifulSoup(webpage.content)
+    time.sleep(random() / random()) 
+
+    webpage = requests.get(urls[url], headers=HEADERS, proxies={"http": proxy, "https": proxy})
+    page = BeautifulSoup(webpage.content, features= "html.parser")
 
     books = extract_books(page)
 
@@ -44,7 +61,11 @@ for url in urls:
 
     sheetName = today + '_' + url
 
-    sh.add_worksheet(sheetName, rows = 20, cols = 10)
+    try:
+        sh.add_worksheet(sheetName, rows = 20, cols = 10)
+    except:
+        sheetName = sheetName + '1'
+        sh.add_worksheet(sheetName, rows = 20, cols = 10)
 
     worksheet = sh.worksheet(sheetName)
 
