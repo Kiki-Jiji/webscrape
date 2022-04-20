@@ -4,27 +4,27 @@ import time
 from random import random
 import logging
 
-from utils import extract_books, get_free_proxies, Proxy, write_gs
+from utils import extract_books, write_gs, get_webpage
 
 today = date.today().strftime("%d_%m_%Y")
 
 logging.basicConfig(
-    level=logging.DEBUG, 
+    level=logging.INFO, 
     filename = f'logs/app_{today}.log', 
     filemode='w',
     format='%(name)s - %(levelname)s - %(message)s')
 
 
 time_start = datetime.now()
-logging.debug(f'Time started {time_start}')
+logging.info(f'Time started {time_start}')
 
 HEADERS = { 
-'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36', 
-'Accept' : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 
-'Accept-Language' : 'en-US,en;q=0.5',
-'Accept-Encoding' : 'gzip', 
-'DNT' : '1', # Do Not Track Request Header 
-'Connection' : 'close'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36', 
+    'Accept' : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 
+    'Accept-Language' : 'en-US,en;q=0.5',
+    'Accept-Encoding' : 'gzip', 
+    'DNT' : '1', # Do Not Track Request Header 
+    'Connection' : 'close'
 }
 
 urls = {
@@ -38,23 +38,16 @@ urls = {
     'US_Womens_Rom_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/7588898011/ref=zg_bs_nav_digital-text_4_6190492011'
 }
 
-
-# urls = {
-#     'UK_Hist_Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/362727031/ref=zg_bs_unv_digital-text_4_3507148031_2'
-# }
-
-Prox = Proxy(HEADERS)
-
 book_pages = {}
 
 for url in urls:
     time.sleep(random() / random()) 
 
-    page = Prox.get_webpage(
+    page = get_webpage(
         url= urls[url],
     )
 
-    logging.debug(f'Scraped {url}')
+    logging.info(f'Scraped {url}')
 
     books = extract_books(page)
 
@@ -72,5 +65,5 @@ except:
     all_webpages_df.to_csv(f'backup_data_{today}.csv', index=False)
 
 time_end = datetime.now()
-logging.debug(f'Time end {time_end}')
-logging.debug(f'Time taken {time_end - time_start}')
+logging.info(f'Time end {time_end}')
+logging.info(f'Time taken {time_end - time_start}')
