@@ -1,10 +1,11 @@
+from os import access
 import pandas as pd
 from datetime import date, datetime
 import time
 from random import random
 import logging
 
-from utils import extract_books, write_gs, get_webpage
+from utils import extract_books, load_all_data, write_gs, get_webpage, write_books_s3
 
 today = date.today().strftime("%d_%m_%Y")
 
@@ -58,12 +59,16 @@ for url in urls:
 
 
 all_webpages_df =  pd.concat(book_pages.values(), ignore_index=True)
+all_webpages_df['date'] = today
 
 try:
     write_gs(all_webpages_df)
+    write_books_s3(all_webpages_df)
 except:
-    all_webpages_df.to_csv(f'backup_data_{today}.csv', index=False)
+    pass
 
 time_end = datetime.now()
 logging.info(f'Time end {time_end}')
 logging.info(f'Time taken {time_end - time_start}')
+
+

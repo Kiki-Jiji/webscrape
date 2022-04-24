@@ -2,15 +2,17 @@ from ipaddress import ip_address
 from itertools import count
 from re import T
 import requests
-from requests.exceptions import ProxyError
-import random
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import date
 import gspread
-import df2gspread as d2g
 import logging
 import yaml
+import boto3
+import os
+import pandas as pd
+import io
+
 
 def get_child(html, pos):
     return [i for i in html[pos].children][0]
@@ -145,3 +147,60 @@ def load_webapi():
     with open('webscrape_api_key.yml') as f:
         yaml_dict = yaml.safe_load(f)
     return yaml_dict
+
+
+def load_all_data():
+
+    gc = gspread.service_account("webscrape-346716-e7082b6f73c5.json")
+
+    sh = gc.open("Amazon Data")
+
+    worksheet_list = sh.worksheets()
+
+
+    sheet_dfs = {}
+
+    for sheet in worksheet_list:
+        dataframe = pd.DataFrame(sheet.get_all_records())
+        dataframe['date'] = sheet.title
+        sheet_dfs[sheet.title] = dataframe
+
+
+    all_data =  pd.concat(sheet_dfs.values(), ignore_index=True)
+    return all_data
+
+
+def write_books_s3(df):
+
+    assert list(df) == [
+        'book_rank_scrape', 'book_title_txt', 'author_txt', 'star_rating_txt',
+         'book_type_txt', 'price_txt', 'category', 'date'], 'colnames wrong'
+
+    s3 = boto3.client(
+        service_name = 's3',
+        region_name = 'eu-west-2',
+        aws_access_key_id = os.environ['access_key'],
+        aws_secret_access_key = os.environ['secret']
+    )
+
+    s3_bucket_name = 'books-webscrape'
+
+    response = s3.get_object(Bucket = s3_bucket_name, Key="books.csv")
+
+    books_df = pd.read_csv(response.get("Body"))
+
+    combined_df = pd.concat([books_df, df])
+
+    with io.StringIO() as csv_buffer:
+        combined_df.to_csv(csv_buffer, index=False)
+
+        response = s3.put_object(
+            Bucket= s3_bucket_name, Key="books.csv", Body=csv_buffer.getvalue()
+        )
+
+        status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+
+        if status == 200:
+            print(f"Successful S3 put_object response. Status - {status}")
+        else:
+            print(f"Unsuccessful S3 put_object response. Status - {status}")

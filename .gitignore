@@ -3,6 +3,9 @@
 *.yml
 *.yaml
 
+envvars.py
+*.csv
+
 .DS_Store
 .huskyrc.json
 out
