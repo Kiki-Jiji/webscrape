@@ -1,18 +1,63 @@
-from ipaddress import ip_address
-from itertools import count
 import json
-from re import T
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
-from datetime import date
-import gspread
-import logging
-import yaml
-import boto3
 import os
-import pandas as pd
+from datetime import date, datetime
+import time
+import logging
+import boto3
+from bs4 import BeautifulSoup
+import requests
 import io
+
+def main():
+
+    today = date.today().strftime("%d_%m_%Y")
+    
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    
+    time_start = datetime.now()
+    logging.info(f'Time started {time_start}')
+
+    urls = {
+        'UK_Hist_Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/362727031/ref=zg_bs_unv_digital-text_4_3507148031_2',
+        'UK_Reg Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Regency-Historical-Romance/zgbs/digital-text/3507148031/ref=zg_bs_nav_digital-text_4_362727031',
+        'US_Hist_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/158571011/ref=zg_bs_unv_digital-text_4_158573011_2',
+        'US_Reg_Romance' : 'https://www.amazon.com/Best-Sellers-Regency-Historical-Romance/zgbs/digital-text/158573011',
+        'UK_Womens_Fiction' : 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/4542772031/ref=zg_bs_nav_digital-text_3_362270031',
+        'UK_Womens_Romance_Fiction': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/4542787031/ref=zg_bs_nav_digital-text_4_4542772031',
+        'US_Womens_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/6190492011/ref=zg_bs_nav_digital-text_3_157028011',
+        'US_Womens_Rom_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/7588898011/ref=zg_bs_nav_digital-text_4_6190492011'
+    }
+
+    book_pages = {}
+
+    for url in urls:
+
+        page = get_webpage(
+            url= urls[url],
+        )
+
+        logging.info(f'Scraped {url}')
+
+        books = extract_books(page)
+
+        book_pages[url] = books
+
+
+    book_data = {
+        "data" : book_pages,
+        "date" : today
+    }
+
+    try:
+        write_books_s3(book_data, filename = today)
+    except Exception as e:
+        logging.info(f'Writeing to s3 failed {e}')
+
+    time_end = datetime.now()
+    logging.info(f'Time end {time_end}')
+    logging.info(f'Time taken {time_end - time_start}')
+
 
 
 def get_child(html, pos):
@@ -84,37 +129,16 @@ def extract_books(page):
 
 
 
-
-def write_gs(df):
-
-    gc = gspread.service_account("webscrape-346716-e7082b6f73c5.json")
-
-    sh = gc.open("Amazon Data")
-
-    sheetName = date.today().strftime("%d_%m_%Y") 
-
-    try:
-        sh.add_worksheet(sheetName, rows = 20, cols = 10)
-    except:
-        sheetName = sheetName + '_1'
-        sh.add_worksheet(sheetName, rows = 20, cols = 10)
-
-    logging.info(f'Created excel sheetnamer was: {sheetName}')
-
-    worksheet = sh.worksheet(sheetName)
-
-    worksheet.update([df.columns.values.tolist()] + df.values.tolist())
-
-
 def get_webpage(url):
 
-    api_key =  os.getenv('proxy_api')
+    api_key =  os.environ.get('proxy_api')
     assert api_key is not None, "envrioment var proxy_api not found"
+
 
     api_url = "https://api.webscrapingapi.com/v1"
 
     params = {
-        "api_key": api_key['api_key'],
+        "api_key": api_key,
         "url": url
     }
 
@@ -145,31 +169,10 @@ def get_webpage(url):
 
 
 
-def load_all_data():
-
-    gc = gspread.service_account("webscrape-346716-e7082b6f73c5.json")
-
-    sh = gc.open("Amazon Data")
-
-    worksheet_list = sh.worksheets()
-
-    sheet_dfs = {}
-
-    for sheet in worksheet_list:
-        dataframe = pd.DataFrame(sheet.get_all_records())
-        dataframe['date'] = sheet.title
-        sheet_dfs[sheet.title] = dataframe
-
-
-    all_data =  pd.concat(sheet_dfs.values(), ignore_index=True)
-    return all_data
-
-
 def write_books_s3(book_dict, filename):
-    
 
-    aws_access_key = os.environ.get('access_key')
-    aws_secret_access = os.environ.get('secret')
+    aws_access_key = os.getenv('access_key')
+    aws_secret_access = os.getenv('secret')
 
     if aws_access_key is None or aws_secret_access is None:
         raise Exception("Missing envrioment variables to access s3- access_key and secret")
@@ -195,3 +198,13 @@ def write_books_s3(book_dict, filename):
         logging.info(f"Successful S3 put_object response. Status - {status}")
     else:
         logging.info(f"Unsuccessful S3 put_object response. Status - {status}")
+
+
+
+def lambda_handler(event, context):
+    main()
+    
+    return {
+        'statusCode': 200,
+        'body': json.dumps(f'Successful')
+    }

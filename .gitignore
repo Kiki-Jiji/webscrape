@@ -5,6 +5,7 @@
 
 envvars.py
 *.csv
+*.zip
 
 .DS_Store
 .huskyrc.json
@@ -50,3 +51,4 @@ pydevd*.log
 nodeLanguageServer/**
 nodeLanguageServer.*/**
 dist/**
+.Rproj.user
