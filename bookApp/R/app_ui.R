@@ -9,14 +9,38 @@ app_ui <- function(request) {
     # Leave this function for adding external resources
     golem_add_external_resources(),
     # Your application UI logic 
-    fluidPage(
-      tabsetPanel(
-        tabPanel(title = "tab 1",
-          h1("Overview"),
-          DT::DTOutput('tbl')),
-        tabPanel(title = "tab 2", "The content of the second tab")
-      )
+    
+    dashboardPage(
+      dashboardHeader(title = "Top books"),
+      dashboardSidebar(
+        sidebarMenu(
+          menuItem("Books", tabName = "dashboard", icon = icon("dashboard")),
+          menuItem("Widgets", tabName = "widgets", icon = icon("th")),
+          menuItem("Price", tabName = "price", icon = icon("th"))
+        )
+      ),
+      dashboardBody(
+        tabItems(
+          # First tab content
+          tabItem(tabName = "dashboard",
+                  fluidRow(
+                    DT::DTOutput('tbl')
+                  )
+          ),
+          
+          # Second tab content
+          tabItem(tabName = "widgets",
+                  h2("Widgets tab content"),
+                  plotlyOutput("stars")
+                  
+          ),
+          tabItem(tabName = "price",
+                  h2("Price"),
+                  plotlyOutput("price")
+          )
+        )
     )
+  )
   )
 }
 
