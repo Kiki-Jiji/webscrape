@@ -16,7 +16,8 @@ app_ui <- function(request) {
         sidebarMenu(
           menuItem("Books", tabName = "dashboard", icon = icon("dashboard")),
           menuItem("Widgets", tabName = "widgets", icon = icon("th")),
-          menuItem("Price", tabName = "price", icon = icon("th"))
+          menuItem("Price", tabName = "price", icon = icon("th")),
+          menuItem("Words", tabName = "words", icon = icon("th"))
         )
       ),
       dashboardBody(
@@ -37,6 +38,15 @@ app_ui <- function(request) {
           tabItem(tabName = "price",
                   h2("Price"),
                   plotlyOutput("price")
+          ),
+          tabItem(tabName = "words",
+                  h2("Words"),
+                  numericInput('size', 'Minimum Occurences', 10),
+                  selectInput("shape", label = "Choose Shape", 
+                              choices = c("circle", "star", "cardioid", "diamond", "triangle-forward", "triangle", "pentagon")),
+                  wordcloud2::wordcloud2Output('wordcloud'),
+                  hr(),
+                  DT::DTOutput('top_words')
           )
         )
     )

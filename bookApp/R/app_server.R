@@ -40,6 +40,53 @@ app_server <- function( input, output, session ) {
      plot
     )
   })
+  
+  
+  output$wordcloud = wordcloud2::renderWordcloud2({
+    
+    word_counts = termFreq(df$book_title_txt, control = list(
+      removePunctuation = TRUE,
+      removeNumbers = TRUE,
+      stopwords = TRUE,
+      stemming = TRUE)
+    )
+    
+    word_counts = data.frame(word_counts)
+    word_counts$word = row.names(word_counts)
+    
+    
+    wordcloud_df = word_counts %>%
+      rename(freq = word_counts) %>%
+      mutate(freq = as.numeric(freq)) %>%
+      select(word, freq)
+    
+    wordcloud2::wordcloud2(data=wordcloud_df, minSize = input$size, shape = input$shape)
+    
+  })
+
+
+
+  word_counts = termFreq(df$book_title_txt, control = list(
+    removePunctuation = TRUE,
+    removeNumbers = TRUE,
+    stopwords = TRUE,
+    stemming = TRUE)
+  )
+  
+  word_counts = data.frame(word_counts)
+  word_counts$word = row.names(word_counts)
+  
+  
+  top_words_df = word_counts %>%
+    rename(freq = word_counts) %>%
+    mutate(freq = as.numeric(freq)) %>%
+    select(word, freq)
+
+  output$top_words = DT::renderDT(
+    top_words_df, filter = "top", rownames = FALSE, options = list(pageLength = 5)
+  )
+
+
     
 }
 

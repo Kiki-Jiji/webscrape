@@ -1,30 +1,61 @@
 
-df = readr::read_csv("book_data.csv")
+#df = readr::read_csv("book_data.csv")
 
-df_star = df %>%
-  mutate(star_num = as.numeric(
-    stringr::str_extract(df$star_rating_txt, "[0-9].[0-9]")
-  )
-  )
+df = load_data()
+df = tibble::tibble(df)
 
-as.numeric(
-stringr::str_remove(stringr::str_remove(df$price_txt, "[£$]"), "[.]")
+
+library(wordcloud)
+library(tm)
+
+word_counts = termFreq(df$book_title_txt, control = list(
+  removePunctuation = TRUE,
+  removeNumbers = TRUE,
+  stopwords = TRUE,
+  stemming = TRUE)
 )
 
+word_counts = data.frame(word_counts)
+word_counts$word = row.names(word_counts)
+
+
+hat = word_counts %>%
+  rename(freq = word_counts) %>%
+  mutate(freq = as.numeric(freq)) %>%
+  select(word, freq)
+
+
+shapes = c("circle", "star", "cardioid", "diamond", "triangle-forward", "triangle", "pentagon")
+
+library(wordcloud2)
+
+wordcloud2(data=hat, minSize = 1, shape = shapes[4])
 
 
 
-df_star %>%
-  mutate(price_txt = as.numeric(
-    stringr::str_remove(stringr::str_remove(price_txt, "[£$]"), "[.]")
-  ), star_num = ifelse(is.na(star_num), "None", star_num)) %>%
-  group_by(star_num) %>%
-  summarise(avg_price_pounds = mean(price_txt, na.rm=TRUE) / 100) %>%
-ggplot(aes(star_num, avg_price_pounds, group = 1)) + geom_bar(stat="identity") + theme_bw()
+
+
+
+figPath = system.file("examples/t.png",package = "wordcloud2")
+
+wordcloud2(hat, figPath = "book.png")
 
 
 
 
-plotly::ggplotly(
-  ggplot(df_star, aes(star_num)) + geom_histogram() + theme_bw()
-)
+
+
+key = "AKIASFBKEY236QV464EC"
+secret = "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"
+region = "eu-west-2"
+
+
+bucket = aws.s3::get_bucket(bucket = bucket_name,
+                   key = key,
+                   secret = secret, 
+                   region = region)
+
+
+
+
+load_data()

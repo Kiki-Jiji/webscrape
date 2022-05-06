@@ -9,6 +9,8 @@ library(shinydashboard)
 library(dplyr)
 library(ggplot2)
 library(plotly)
+library(tm)
+library(shiny)
 golem::document_and_reload()
 
 # Run the application

@@ -7,10 +7,14 @@ import boto3
 from bs4 import BeautifulSoup
 import requests
 import io
+from typing import Dict, List
+import csv
+import re
+
 
 def main():
 
-    today = date.today().strftime("%d_%m_%Y")
+    today: str = date.today().strftime("%d_%m_%Y")
     
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -39,18 +43,12 @@ def main():
 
         logging.info(f'Scraped {url}')
 
-        books = extract_books(page)
+        books = extract_books(page, today, catagory = urls[url])
 
         book_pages[url] = books
 
-
-    book_data = {
-        "data" : book_pages,
-        "date" : today
-    }
-
     try:
-        write_books_s3(book_data, filename = today)
+        write_books_s3(book_pages, today)
     except Exception as e:
         logging.info(f'Writeing to s3 failed {e}')
 
@@ -63,7 +61,7 @@ def main():
 def get_child(html, pos):
     return [i for i in html[pos].children][0]
 
-def extract_books(page):
+def extract_books(page, today, catagory):
 
     book_list = page.find_all('span', {'class' : 'zg-bdg-text'})
 
@@ -99,6 +97,8 @@ def extract_books(page):
                 book['star_rating_txt' ] = 'unknown'
                 book['book_type_txt'] = [i for i in [i for i in book_type][0]][0]
                 book['price_txt'] = [i for i in [i for i in [i for i in [i for i in price][0]][0]][0]][0]
+                book['catagory'] = catagory
+                book['date'] = today
 
             else:
                 # no idea jk :P but dict always needs 5 keys
@@ -107,6 +107,8 @@ def extract_books(page):
                 book['star_rating_txt' ] = 'unknown'
                 book['book_type_txt'] = 'unknown'
                 book['price_txt'] = 'unknown'
+                book['catagory'] = catagory
+                book['date'] = today
         else:
             # expected 6 catorgories
             img = book_info[0]
@@ -122,6 +124,8 @@ def extract_books(page):
             book['star_rating_txt' ]= [i for i in [i for i in [i for i in [i for i in [i for i in star_rating][0]][0]][0]][0]][0]
             book['book_type_txt'] = [i for i in [i for i in book_type][0]][0]
             book['price_txt'] = [i for i in [i for i in [i for i in [i for i in price][0]][0]][0]][0]
+            book['catagory'] = catagory
+            book['date'] = today
 
         books[book_rank_scrape] = book
 
@@ -169,7 +173,7 @@ def get_webpage(url):
 
 
 
-def write_books_s3(book_dict, filename):
+def write_books_s3(book_pages: dict, today: str):
 
     aws_access_key = os.getenv('access_key')
     aws_secret_access = os.getenv('secret')
@@ -185,12 +189,49 @@ def write_books_s3(book_dict, filename):
     )
 
     s3_bucket_name = 'books-webscrape'
+    csv_filename = "books.csv"
+
+    response = s3.get_object(Bucket=s3_bucket_name, Key=csv_filename)
+
+    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+
+    if status == 200:
+        logging.info(f"Successful S3 get_object response. Status - {status}")
+    else:
+        logging.info(f"Unsuccessful S3 get_object response. Status - {status}")
+        raise Exception(f"Unsuccessful S3 get_object response. Status - {status}")
+
+
+    data = response['Body'].read().decode('utf-8').splitlines()
+    records = csv.DictReader(data)
+
+    existing = [i for i in records]
+
+    rows = []
+    for catagory in book_pages.keys():
+        for rank in book_pages[catagory].keys():
+            rows.append(book_pages[catagory][rank])
+
+
+    latest_date = get_latest_date(existing)
+    if latest_date == today:
+        logging.info("This date already exists, not saving")
+        return
+
+
+    combined = existing + rows
+
+    stream = io.StringIO()
+    headers = list(combined[0].keys())
+    writer = csv.DictWriter(stream, fieldnames=headers)
+    writer.writeheader()
+    writer.writerows(combined)
+
+    csv_string_object = stream.getvalue()
 
     response = s3.put_object(
-        Body = json.dumps(book_dict),
-        Bucket = s3_bucket_name,
-        Key = filename
-    )
+                Bucket = s3_bucket_name, Key = csv_filename, Body = csv_string_object
+            )
 
     status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
 
@@ -198,8 +239,19 @@ def write_books_s3(book_dict, filename):
         logging.info(f"Successful S3 put_object response. Status - {status}")
     else:
         logging.info(f"Unsuccessful S3 put_object response. Status - {status}")
+        raise Exception(f"Unsuccessful S3 get_object response. Status - {status}")
 
 
+def get_latest_date(existing: List):
+    all_dates = [i['date'] for i in existing]
+
+    unique_dates = set(all_dates)
+
+    latest_date_raw = max([datetime.strptime(i, '%d_%m_%Y').date() for i in unique_dates])
+
+    latest_date = re.sub("-", "_", latest_date_raw.strftime("%d_%m_%Y"))
+
+    return(latest_date)
 
 def lambda_handler(event, context):
     main()

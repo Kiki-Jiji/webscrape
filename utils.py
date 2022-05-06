@@ -195,3 +195,70 @@ def write_books_s3(book_dict, filename):
         logging.info(f"Successful S3 put_object response. Status - {status}")
     else:
         logging.info(f"Unsuccessful S3 put_object response. Status - {status}")
+
+
+def convert_to_pd(book_pages: Dict, date: chr):
+
+    books_dfs = {}
+
+    for cato in book_pages.keys():
+
+        cato_df = pd.DataFrame.from_dict(book_pages[cato], orient='index')
+        cato_df['catagory'] = cato
+
+        books_dfs[cato] = cato_df
+
+    day_df = pd.concat(books_dfs.values(), ignore_index=True)
+    day_df['date'] = date
+    
+    return day_df
+
+def write_books_s3(book_pages_df, today):
+
+    aws_access_key = os.getenv('access_key')
+    aws_secret_access = os.getenv('secret')
+
+    if aws_access_key is None or aws_secret_access is None:
+        raise Exception("Missing envrioment variables to access s3- access_key and secret")
+
+    s3 = boto3.client(
+        service_name = 's3',
+        region_name = 'eu-west-2',
+        aws_access_key_id = aws_access_key,
+        aws_secret_access_key = aws_secret_access
+    )
+
+    s3_bucket_name = 'books-webscrape'
+
+    response = s3.get_object(Bucket=s3_bucket_name, Key="books.csv")
+
+    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+
+    if status == 200:
+        logging.info(f"Successful S3 get_object response. Status - {status}")
+        books_df = pd.read_csv(response.get("Body"))
+    else:
+        logging.info(f"Unsuccessful S3 get_object response. Status - {status}")
+
+
+    if today in books_df.date.unique():
+        logging.info("Data already exists, not saving")
+        return
+    else:
+        logging.info("Data doesn't exists, adding to total")
+        combined_data = pd.concat([books_df, book_pages_df])
+        
+        
+    with io.StringIO() as csv_buffer:
+        combined_data.to_csv(csv_buffer, index=False)
+
+        response = s3.put_object(
+            Bucket=s3_bucket_name, Key="books.csv", Body=csv_buffer.getvalue()
+        )
+
+        status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+
+        if status == 200:
+            logging.info(f"Successful S3 put_object response. Status - {status}")
+        else:
+            logging.info(f"Unsuccessful S3 put_object response. Status - {status}")

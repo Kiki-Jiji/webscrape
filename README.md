@@ -13,7 +13,18 @@ Make any changes to the `lambda_function.py` in lambda, this is what is ran when
 pip install requests -t ./
 ```
 
+* requests
+* bs4
+
+
+Ins
+
+
 The contents of the lambda folder then need to be zipped. 
+
+```bash
+zip -r zip.zip .
+```
 
 > Note this is the contents (everything inside lambda) NOT the actual folder
 
