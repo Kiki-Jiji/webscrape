@@ -5,85 +5,93 @@
 #' @import shiny
 #' @noRd
 app_server <- function( input, output, session ) {
-  # Your application server logic 
-  df = readr::read_csv("book_data.csv")
   
-  df_star = df %>%
-    mutate(star_num = as.numeric(
-      stringr::str_extract(df$star_rating_txt, "[0-9].[0-9]")
-    )
-    )
+  
+  # Your application server logic 
+  dollar_pound_rate =  0.81
+  df = load_data()
+  df = clean_data(df)
+  
+  # incorrect category labels deal with later
+  df = df %>%
+    dplyr::filter(date != "2022-05-07")
+  
+  available_categories <- unique(df$category)
+  updateSelectInput(inputId = "cat", choices = c("all", available_categories), selected = "all")
+  updateSelectInput(inputId = "author_cat", choices = c("all", available_categories), selected = "all")
 
+  
+  dates = unique(df$date)
+  updateDateRangeInput(inputId = "author_dr", start = min(dates), end = max(dates))
+  
   output$tbl = DT::renderDT(
     df, filter = "top", rownames = FALSE, options = list(pageLength = 5)
   )
   
-  output$stars = plotly::renderPlotly({
-    
-    plotly::ggplotly(
-      ggplot(df_star, aes(star_num)) + geom_histogram() + theme_bw()
-    )
-  })
   
   output$price = plotly::renderPlotly({
     
-    plot = df_star %>%
-      mutate(price_txt = as.numeric(
-        stringr::str_remove(stringr::str_remove(price_txt, "[£$]"), "[.]")
-      ), star_num = ifelse(is.na(star_num), "None", star_num)) %>%
-      group_by(star_num) %>%
-      summarise(avg_price_pounds = round(mean(price_txt, na.rm=TRUE) / 100, 1)) %>%
-      ggplot(aes(star_num, avg_price_pounds, group = 1)) + geom_bar(stat="identity") + theme_bw()
+    plot_data = df %>%
+      mutate(category = gsub("_", " ", category)) %>%
+      group_by(category) %>%
+      summarise(avg_price_pounds = mean(price, na.rm=TRUE)) %>%
+      mutate(country = case_when(
+        grepl("UK", category) ~ "UK",
+        grepl("US", category) ~ "US"
+      ),
+      avg_price_pounds = ifelse(country == "US", avg_price_pounds* dollar_pound_rate, avg_price_pounds),
+      avg_price_pounds = round(avg_price_pounds, 2))
     
     
-    plotly::ggplotly(
-     plot
-    )
+    plotly::plot_ly(x = plot_data$category, y = plot_data$avg_price_pounds, color = plot_data$country, colors = c("Red", "Purple")) |> 
+      plotly::add_bars() |> layout(plot_bgcolor='transparent') |>
+      layout(paper_bgcolor='transparent', yaxis = list(title = "Average price in Pound Sterling")) 
+    
+    
+    
   })
   
+  output$author_pop = plotly::renderPlotly({
+    
+    
+    plot_data = top_authors(df, input$author_cat, min_date = input$author_dr[1], max_date = input$author_dr[2])
+    
+    xform <- list(categoryorder = "array",
+                  categoryarray = plot_data$author)
+    
+    plot_ly(
+      x = plot_data$author,
+      y = plot_data$n,
+      name = "SF Zoo",
+      type = "bar"
+    ) %>% 
+      layout(xaxis = xform)
+    
+  })
+  
+  
+  top_words <- reactiveVal()   
+  
+  observeEvent(input$cat, {
+    
+    tw =  calculate_top_words(df, select_category = input$cat) 
+    
+    top_words(tw)
+    
+  })
   
   output$wordcloud = wordcloud2::renderWordcloud2({
     
-    word_counts = termFreq(df$book_title_txt, control = list(
-      removePunctuation = TRUE,
-      removeNumbers = TRUE,
-      stopwords = TRUE,
-      stemming = TRUE)
-    )
-    
-    word_counts = data.frame(word_counts)
-    word_counts$word = row.names(word_counts)
-    
-    
-    wordcloud_df = word_counts %>%
-      rename(freq = word_counts) %>%
-      mutate(freq = as.numeric(freq)) %>%
-      select(word, freq)
-    
-    wordcloud2::wordcloud2(data=wordcloud_df, minSize = input$size, shape = input$shape)
+    top_words() |>
+    slice_head(n = input$size) |>
+    wordcloud2::wordcloud2(shape = input$shape, size = 0.8)
     
   })
-
-
-
-  word_counts = termFreq(df$book_title_txt, control = list(
-    removePunctuation = TRUE,
-    removeNumbers = TRUE,
-    stopwords = TRUE,
-    stemming = TRUE)
-  )
-  
-  word_counts = data.frame(word_counts)
-  word_counts$word = row.names(word_counts)
   
   
-  top_words_df = word_counts %>%
-    rename(freq = word_counts) %>%
-    mutate(freq = as.numeric(freq)) %>%
-    select(word, freq)
-
+  
   output$top_words = DT::renderDT(
-    top_words_df, filter = "top", rownames = FALSE, options = list(pageLength = 5)
+    top_words(), filter = "top", rownames = FALSE, options = list(pageLength = 5)
   )
 
 

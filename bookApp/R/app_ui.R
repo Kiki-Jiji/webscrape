@@ -10,14 +10,14 @@ app_ui <- function(request) {
     golem_add_external_resources(),
     # Your application UI logic 
     
-    dashboardPage(
+    dashboardPage(skin = "purple",
       dashboardHeader(title = "Top books"),
       dashboardSidebar(
         sidebarMenu(
           menuItem("Books", tabName = "dashboard", icon = icon("dashboard")),
-          menuItem("Widgets", tabName = "widgets", icon = icon("th")),
-          menuItem("Price", tabName = "price", icon = icon("th")),
-          menuItem("Words", tabName = "words", icon = icon("th"))
+          menuItem("Price", tabName = "price", icon = icon("pound-sign")),
+          menuItem("Words", tabName = "words", icon = icon("envelope-open-text")),
+          menuItem("Authors", tabName = "authors", icon = icon("envelope-open-text"))
         )
       ),
       dashboardBody(
@@ -29,24 +29,29 @@ app_ui <- function(request) {
                   )
           ),
           
-          # Second tab content
-          tabItem(tabName = "widgets",
-                  h2("Widgets tab content"),
-                  plotlyOutput("stars")
-                  
-          ),
           tabItem(tabName = "price",
                   h2("Price"),
-                  plotlyOutput("price")
+                  h4("Average Price per category in pound sterling"),
+                  plotlyOutput("price", height = "600px")
           ),
           tabItem(tabName = "words",
                   h2("Words"),
-                  numericInput('size', 'Minimum Occurences', 10),
+                  numericInput('size', 'Number of top words', 20),
                   selectInput("shape", label = "Choose Shape", 
                               choices = c("circle", "star", "cardioid", "diamond", "triangle-forward", "triangle", "pentagon")),
+                  selectInput("cat", label = "Choose Category", 
+                              choices = "None"),
+                  
                   wordcloud2::wordcloud2Output('wordcloud'),
                   hr(),
                   DT::DTOutput('top_words')
+          ),
+          tabItem(tabName = "authors",
+                  h2("Authors"),
+                  selectInput("author_cat", label = "Choose Category", 
+                              choices = "None", multiple = TRUE),
+                  dateRangeInput(inputId = "author_dr", label = "Date Range"),
+                  plotlyOutput("author_pop", height = "600px")
           )
         )
     )

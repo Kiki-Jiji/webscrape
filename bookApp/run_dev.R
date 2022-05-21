@@ -4,12 +4,11 @@ options(golem.app.prod = FALSE) # TRUE = production mode, FALSE = development mo
 # Detach all loaded packages and clean your environment
 golem::detach_all_attached()
 
-# Document and reload your package
+# Document and reload your package2
 library(shinydashboard)
 library(dplyr)
 library(ggplot2)
 library(plotly)
-library(tm)
 library(shiny)
 golem::document_and_reload()
 
