@@ -12,52 +12,6 @@ import csv
 import re
 
 
-def main():
-
-    today: str = date.today().strftime("%d_%m_%Y")
-    
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    
-    time_start = datetime.now()
-    logging.info(f'Time started {time_start}')
-
-    urls = {
-        'UK_Hist_Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/362727031/ref=zg_bs_unv_digital-text_4_3507148031_2',
-        'UK_Reg Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Regency-Historical-Romance/zgbs/digital-text/3507148031/ref=zg_bs_nav_digital-text_4_362727031',
-        'US_Hist_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/158571011/ref=zg_bs_unv_digital-text_4_158573011_2',
-        'US_Reg_Romance' : 'https://www.amazon.com/Best-Sellers-Regency-Historical-Romance/zgbs/digital-text/158573011',
-        'UK_Womens_Fiction' : 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/4542772031/ref=zg_bs_nav_digital-text_3_362270031',
-        'UK_Womens_Romance_Fiction': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/4542787031/ref=zg_bs_nav_digital-text_4_4542772031',
-        'US_Womens_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/6190492011/ref=zg_bs_nav_digital-text_3_157028011',
-        'US_Womens_Rom_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/7588898011/ref=zg_bs_nav_digital-text_4_6190492011'
-    }
-
-    book_pages = {}
-
-    for url in urls:
-
-        page = get_webpage(
-            url= urls[url],
-        )
-
-        logging.info(f'Scraped {url}')
-
-        books = extract_books(page, today, catagory = urls[url])
-
-        book_pages[url] = books
-
-    try:
-        write_books_s3(book_pages, today)
-    except Exception as e:
-        logging.info(f'Writeing to s3 failed {e}')
-
-    time_end = datetime.now()
-    logging.info(f'Time end {time_end}')
-    logging.info(f'Time taken {time_end - time_start}')
-
-
-
 def get_child(html, pos):
     return [i for i in html[pos].children][0]
 
@@ -172,91 +126,70 @@ def get_webpage(url):
     return page
 
 
+today: str = date.today().strftime("%d_%m_%Y")
 
-def write_books_s3(book_pages: dict, today: str):
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
-    aws_access_key = os.getenv('access_key')
-    aws_secret_access = os.getenv('secret')
+time_start = datetime.now()
+logging.info(f'Time started {time_start}')
 
-    if aws_access_key is None or aws_secret_access is None:
-        raise Exception("Missing envrioment variables to access s3- access_key and secret")
+urls = {
+    'UK_Hist_Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/362727031/ref=zg_bs_unv_digital-text_4_3507148031_2',
+    'UK_Reg Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Regency-Historical-Romance/zgbs/digital-text/3507148031/ref=zg_bs_nav_digital-text_4_362727031',
+    'US_Hist_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/158571011/ref=zg_bs_unv_digital-text_4_158573011_2',
+    'US_Reg_Romance' : 'https://www.amazon.com/Best-Sellers-Regency-Historical-Romance/zgbs/digital-text/158573011',
+    'UK_Womens_Fiction' : 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/4542772031/ref=zg_bs_nav_digital-text_3_362270031',
+    'UK_Womens_Romance_Fiction': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/4542787031/ref=zg_bs_nav_digital-text_4_4542772031',
+    'US_Womens_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/6190492011/ref=zg_bs_nav_digital-text_3_157028011',
+    'US_Womens_Rom_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/7588898011/ref=zg_bs_nav_digital-text_4_6190492011'
+}
 
-    s3 = boto3.client(
-        service_name = 's3',
-        region_name = 'eu-west-2',
-        aws_access_key_id = aws_access_key,
-        aws_secret_access_key = aws_secret_access
-    )
-
-    s3_bucket_name = 'books-webscrape'
-    csv_filename = "books.csv"
-
-    response = s3.get_object(Bucket=s3_bucket_name, Key=csv_filename)
-
-    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-
-    if status == 200:
-        logging.info(f"Successful S3 get_object response. Status - {status}")
-    else:
-        logging.info(f"Unsuccessful S3 get_object response. Status - {status}")
-        raise Exception(f"Unsuccessful S3 get_object response. Status - {status}")
+book_pages = {}
 
 
-    data = response['Body'].read().decode('utf-8').splitlines()
-    records = csv.DictReader(data)
-
-    existing = [i for i in records]
-
-    rows = []
-    for catagory in book_pages.keys():
-        for rank in book_pages[catagory].keys():
-            rows.append(book_pages[catagory][rank])
+url = "UK_Hist_Romance"
 
 
-    latest_date = get_latest_date(existing)
-    if latest_date == today:
-        logging.info("This date already exists, not saving")
-        return
 
 
-    combined = existing + rows
+page = get_webpage(
+    url= urls[url],
+)
 
-    stream = io.StringIO()
-    headers = list(combined[0].keys())
-    writer = csv.DictWriter(stream, fieldnames=headers)
-    writer.writeheader()
-    writer.writerows(combined)
+logging.info(f'Scraped {url}')
 
-    csv_string_object = stream.getvalue()
+books = extract_books(page, today, catagory = urls[url])
 
-    response = s3.put_object(
-                Bucket = s3_bucket_name, Key = csv_filename, Body = csv_string_object
-            )
+books.keys()
 
-    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-
-    if status == 200:
-        logging.info(f"Successful S3 put_object response. Status - {status}")
-    else:
-        logging.info(f"Unsuccessful S3 put_object response. Status - {status}")
-        raise Exception(f"Unsuccessful S3 get_object response. Status - {status}")
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# image
 
 
-def get_latest_date(existing: List):
-    all_dates = [i['date'] for i in existing]
+# <a class="a-link-normal"
+#  href="/Tell-Bees-that-Gone-Outlander-ebook/dp/B092DTBWN4/ref=zg_bs_362727031_1/257-9882171-3195063?pd_rd_i=B092DTBWN4&amp;psc=1" 
+#  role="link"
+#   tabindex="-1">
+#   <div class="a-section a-spacing-mini _cDEzb_noop_3Xbw5">
+#       <img alt="Go Tell the Bees that I am Gone: (Outlander 9)" 
+#       class="a-dynamic-image p13n-sc-dynamic-image p13n-product-image"
+#     data-a-dynamic-image='{"https://images-eu.ssl-images-amazon.com/images/I/81X9VujKgsL._AC_UL302_SR302,200_.jpg":[302,200],
+#     "https://images-eu.ssl-images-amazon.com/images/I/81X9VujKgsL._AC_UL604_SR604,400_.jpg":[604,400]
+#     ,"https://images-eu.ssl-images-amazon.com/images/I/81X9VujKgsL._AC_UL906_SR906,600_.jpg":[906,600]}'
+#      height="200px"
+#       src="https://images-eu.ssl-images-amazon.com/images/I/81X9VujKgsL._AC_UL302_SR302,200_.jpg" 
+#       style="max-width:302px;max-height:200px"/></div>
+#     </a>
 
-    unique_dates = set(all_dates)
 
-    latest_date_raw = max([datetime.strptime(i, '%d_%m_%Y').date() for i in unique_dates])
+image_url = "https://images-eu.ssl-images-amazon.com/images/I/81X9VujKgsL._AC_UL906_SR906,600_.jpg"
 
-    latest_date = re.sub("-", "_", latest_date_raw.strftime("%d_%m_%Y"))
+import requests
 
-    return(latest_date)
+img_data = requests.get(image_url).content
 
-def lambda_handler(event, context):
-    main()
-    
-    return {
-        'statusCode': 200,
-        'body': json.dumps(f'Successful')
-    }
+with open('image_name.jpg', 'wb') as handler:
+    handler.write(img_data)
+
+

@@ -3,6 +3,10 @@
 *.yml
 *.yaml
 
+*.jpg
+
+dev.py
+
 envvars.py
 *.csv
 *.zip
