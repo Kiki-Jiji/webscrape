@@ -10,6 +10,7 @@ import io
 from typing import Dict, List
 import csv
 import re
+import uuid
 
 
 def main():
@@ -21,6 +22,21 @@ def main():
     
     time_start = datetime.now()
     logging.info(f'Time started {time_start}')
+
+    aws_access_key = os.getenv('access_key')
+    aws_secret_access = os.getenv('secret')
+
+    if aws_access_key is None or aws_secret_access is None:
+        raise Exception("Missing envrioment variables to access s3- access_key and secret")
+
+    s3 = boto3.client(
+        service_name = 's3',
+        region_name = 'eu-west-2',
+        aws_access_key_id = aws_access_key,
+        aws_secret_access_key = aws_secret_access
+    )
+
+    existing = load_existing(s3)
 
     urls = {
         'UK_Hist_Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/362727031/ref=zg_bs_unv_digital-text_4_3507148031_2',
@@ -43,14 +59,21 @@ def main():
 
         logging.info(f'Scraped {url}')
 
-        books = extract_books(page, today, catagory = urls[url])
+        try:
+            books, img_urls = extract_books(page, today, catagory = url)
+            process_imgs(img_urls, existing, s3)
+        except:
+            logging.info(f'!!!!!!!!!!!!!!1Failed to process!!!!!!!!!!! {url}')
 
         book_pages[url] = books
 
+
     try:
+        save_existing(s3, existing)
         write_books_s3(book_pages, today)
     except Exception as e:
         logging.info(f'Writeing to s3 failed {e}')
+
 
     time_end = datetime.now()
     logging.info(f'Time end {time_end}')
@@ -58,8 +81,33 @@ def main():
 
 
 
+def get_image_url(img):
+    
+    img_tag = [i for i in [i for i in img][0]][0]
+
+    dynamic_imgs = re.findall("\{.*\}", str(img_tag))
+
+    dynamic_imgs_seperated = dynamic_imgs[0].split("[")
+
+    img_links = [re.findall("http.*.jpg", i) for i in dynamic_imgs_seperated]
+
+
+    # this is a horrible hack :P 
+    # want the link which had 906 (or any three number begingging with 9)
+    answer = None
+    for i in img_links:
+        try:
+            re.search("9[0-9]{2},", i[0]).group(0)
+            answer = i[0]
+        except:
+            pass
+
+    return answer
+
 def get_child(html, pos):
     return [i for i in html[pos].children][0]
+
+
 
 def extract_books(page, today, catagory):
 
@@ -67,6 +115,7 @@ def extract_books(page, today, catagory):
 
     assert len(book_list) > 0, 'no books found'
     books = {}
+    book_covers = {}
 
     for book_ranking in book_list:
         
@@ -101,6 +150,8 @@ def extract_books(page, today, catagory):
                 book['date'] = today
 
             else:
+
+                img = "unknown"
                 # no idea jk :P but dict always needs 5 keys
                 book['book_title_txt'] = 'unknown'
                 book['author_txt'] = 'unknown'
@@ -129,8 +180,17 @@ def extract_books(page, today, catagory):
 
         books[book_rank_scrape] = book
 
-    return books
+        img_url = get_image_url(img)
 
+        img = {
+            "img_url": img_url,
+            "book_title": book['book_title_txt'],
+            "author": book['author_txt'],
+        }
+
+        book_covers[book_rank_scrape] = img
+
+    return books, book_covers
 
 
 def get_webpage(url):
@@ -170,6 +230,69 @@ def get_webpage(url):
     page = BeautifulSoup(response.content, features= "html.parser")
 
     return page
+
+
+def load_existing(s3):
+    response = s3.get_object(Bucket='books-webscrape', Key="existing.json")
+    existing_bytes = response['Body'].read()
+    existing = json.loads(existing_bytes)
+    return existing
+
+def save_existing(s3, existing):
+    serializedExisting = json.dumps(existing)
+    response = s3.put_object(Body = serializedExisting, Bucket='books-webscrape', Key="existing.json")
+    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+    if status == 200:
+        logging.info(f"Successful S3 put_object response. Status - {status}")
+    else:
+        logging.info(f"Unsuccessful S3 put_object response. Status - {status}")
+        raise Exception(f"Unsuccessful S3 get_object response. Status - {status}")
+
+
+def save_book_cover(img_url, s3, ref: str):
+    image_url = img_url['url']
+
+    img_data = requests.get(image_url).content
+    response = s3.put_object(Body = img_data, Bucket='books-webscrape', Key= "covers/" + ref)
+    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+
+    if status == 200:
+        logging.info(f"Successful S3 put_object response. Status - {status}")
+    else:
+        logging.info(f"Unsuccessful S3 put_object response. Status - {status}")
+        raise Exception(f"Unsuccessful S3 get_object response. Status - {status}")
+
+
+def process_imgs(img_urls: dict, existing:dict, s3) -> dict :
+    for rank in img_urls.keys():
+        ref = str(uuid.uuid1())
+
+        book_metadata = {
+            "author": img_urls[rank]['author'] ,
+            "title": img_urls[rank]['book_title'],
+            "url": img_urls[rank]['img_url']
+        }
+
+
+        existing_authors = [existing[i]['author'] for i in existing]
+
+        if book_metadata['author'] in existing_authors:
+
+            references_author = [ref for ref in existing if existing[ref]['author'] ==  book_metadata['author'] ]
+            exisiting_titles = [existing[ref]['title'] for ref in references_author]
+
+            if book_metadata['title']  in exisiting_titles:
+                logging.info(f"book already exists for author: {book_metadata['author']} and book {book_metadata['title'] }")
+            else:
+                logging.info("book doesn't exist but author does")
+                save_book_cover(book_metadata, s3, ref)
+                existing[ref] = book_metadata
+        else:
+            logging.info("new author")
+            save_book_cover(book_metadata, s3, ref)
+            existing[ref] = book_metadata
+
+    return existing
 
 
 
