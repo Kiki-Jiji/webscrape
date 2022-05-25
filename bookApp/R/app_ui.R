@@ -36,7 +36,7 @@ app_ui <- function(request) {
           ),
           tabItem(tabName = "words",
                   h2("Words"),
-                  numericInput('size', 'Number of top words', 20),
+                  sliderInput('size', 'Number of top words', value = 150, min = 1, max = 400),
                   selectInput("shape", label = "Choose Shape", 
                               choices = c("circle", "star", "cardioid", "diamond", "triangle-forward", "triangle", "pentagon")),
                   selectInput("cat", label = "Choose Category", 

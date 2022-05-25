@@ -61,7 +61,8 @@ clean_data <- function(df) {
            star_rating = star_rating_txt,
            book_type = book_type_txt,
            price = price_txt,
-           category = catagory)
+           category = catagory) %>%
+    arrange(desc(date))
   
   
   return(df_clean)

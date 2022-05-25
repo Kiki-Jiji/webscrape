@@ -18,7 +18,7 @@ app_server <- function( input, output, session ) {
   
   available_categories <- unique(df$category)
   updateSelectInput(inputId = "cat", choices = c("all", available_categories), selected = "all")
-  updateSelectInput(inputId = "author_cat", choices = c("all", available_categories), selected = "all")
+  updateSelectInput(inputId = "author_cat", choices = c("all", available_categories), selected = available_categories[1])
 
   
   dates = unique(df$date)
@@ -65,7 +65,7 @@ app_server <- function( input, output, session ) {
       name = "SF Zoo",
       type = "bar"
     ) %>% 
-      layout(xaxis = xform)
+      layout(xaxis = xform, plot_bgcolor='transparent', paper_bgcolor='transparent')
     
   })
   
@@ -84,7 +84,7 @@ app_server <- function( input, output, session ) {
     
     top_words() |>
     slice_head(n = input$size) |>
-    wordcloud2::wordcloud2(shape = input$shape, size = 0.8)
+    wordcloud2::wordcloud2(shape = input$shape, size = 0.8, backgroundColor = "#ecf0f5")
     
   })
   

@@ -61,7 +61,7 @@ def main():
 
         try:
             books, img_urls = extract_books(page, today, catagory = url)
-            process_imgs(img_urls, existing, s3)
+            process_imgs(img_urls, existing, s3, today)
         except:
             logging.info(f'!!!!!!!!!!!!!!1Failed to process!!!!!!!!!!! {url}')
 
@@ -263,14 +263,15 @@ def save_book_cover(img_url, s3, ref: str):
         raise Exception(f"Unsuccessful S3 get_object response. Status - {status}")
 
 
-def process_imgs(img_urls: dict, existing:dict, s3) -> dict :
+def process_imgs(img_urls: dict, existing:dict, s3, today:str) -> dict :
     for rank in img_urls.keys():
         ref = str(uuid.uuid1())
 
         book_metadata = {
             "author": img_urls[rank]['author'] ,
             "title": img_urls[rank]['book_title'],
-            "url": img_urls[rank]['img_url']
+            "url": img_urls[rank]['img_url'],
+            "date": today,
         }
 
 
