@@ -1,16 +1,18 @@
-import json
-import os
-from datetime import date, datetime
-import time
-import logging
-import boto3
-from bs4 import BeautifulSoup
-import requests
-import io
-from typing import Dict, List
 import csv
+import io
+import json
+import logging
+import os
 import re
+import time
 import uuid
+from datetime import date, datetime
+from typing import Dict, List
+
+import boto3
+
+import requests
+from bs4 import BeautifulSoup
 
 
 def main():
@@ -46,7 +48,13 @@ def main():
         'UK_Womens_Fiction' : 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/4542772031/ref=zg_bs_nav_digital-text_3_362270031',
         'UK_Womens_Romance_Fiction': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/4542787031/ref=zg_bs_nav_digital-text_4_4542772031',
         'US_Womens_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/6190492011/ref=zg_bs_nav_digital-text_3_157028011',
-        'US_Womens_Rom_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/7588898011/ref=zg_bs_nav_digital-text_4_6190492011'
+        'US_Womens_Rom_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/7588898011/ref=zg_bs_nav_digital-text_4_6190492011',
+        'US_Gothic_Romance': 'https://www.amazon.com/gp/bestsellers/digital-text/6487830011/ref=pd_zg_hrsr_digital-text',
+        'US_Rom_Com': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Romantic-Comedy/zgbs/digital-text/6487841011/ref=zg_bs_nav_digital-text_3_6487830011', 
+        'US_Holiday_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Holiday-Romance/zgbs/digital-text/6487831011/ref=zg_bs_nav_digital-text_3_6487841011',
+        'US_Contemporary_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Contemporary-Romance/zgbs/digital-text/158568011/ref=zg_bs_nav_digital-text_3_6487831011',
+        'US_Tudor_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Tudor-Romance/zgbs/digital-text/14530455011/ref=zg_bs_nav_digital-text_4_158571011',
+        'US_Renaissance_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Renaissance-Historical-Romance/zgbs/digital-text/17744543011/ref=zg_bs_nav_digital-text_4_14530455011',
     }
 
     book_pages = {}
