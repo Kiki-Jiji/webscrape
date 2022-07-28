@@ -17,9 +17,6 @@ pip install requests -t ./
 * bs4
 
 
-Ins
-
-
 The contents of the lambda folder then need to be zipped. 
 
 ```bash
@@ -40,9 +37,13 @@ proxy_api is used for the webscraping. The service used is [web scrape api](http
 
 secret and access_key are AWS keys for an S3 bucket. The scraped web page is auto uploaded to an S3 bucket.
 
+## Scripts
+
+`get_urls` - this gets all the different urls for the different catagories and saves this as a json
+
 ## bookApp
 
-This is an RShiny WebApp. Currentl in development. 
+This is an RShiny WebApp. Currently in development. 
 
 In bookApp directory run `run_dev.R` to run the dev version.
 

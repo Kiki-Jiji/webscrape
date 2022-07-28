@@ -21,7 +21,6 @@ train_generator = train_datagen.flow_from_directory(
 )
 
 
-
 model = tf.keras.models.Sequential([
  tf.keras.layers.Conv2D(64, (3,3), activation='relu',
  input_shape=(600, 392, 3)),
@@ -48,6 +47,8 @@ model.compile(loss='binary_crossentropy',
 
 history = model.fit_generator(
  train_generator,
- epochs=15,
+ epochs=15, 
 )
+
+model.save("trained_model")
 

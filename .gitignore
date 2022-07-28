@@ -5,7 +5,14 @@
 
 *.jpg
 
+*.ipynb
+*.html
+
+trained_model/
+
 dev.py
+
+logs/
 
 envvars.py
 *.csv

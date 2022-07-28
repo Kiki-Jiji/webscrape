@@ -40,22 +40,7 @@ def main():
 
     existing = load_existing(s3)
 
-    urls = {
-        'UK_Hist_Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/362727031/ref=zg_bs_unv_digital-text_4_3507148031_2',
-        'UK_Reg Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Regency-Historical-Romance/zgbs/digital-text/3507148031/ref=zg_bs_nav_digital-text_4_362727031',
-        'US_Hist_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/158571011/ref=zg_bs_unv_digital-text_4_158573011_2',
-        'US_Reg_Romance' : 'https://www.amazon.com/Best-Sellers-Regency-Historical-Romance/zgbs/digital-text/158573011',
-        'UK_Womens_Fiction' : 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/4542772031/ref=zg_bs_nav_digital-text_3_362270031',
-        'UK_Womens_Romance_Fiction': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/4542787031/ref=zg_bs_nav_digital-text_4_4542772031',
-        'US_Womens_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/6190492011/ref=zg_bs_nav_digital-text_3_157028011',
-        'US_Womens_Rom_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/7588898011/ref=zg_bs_nav_digital-text_4_6190492011',
-        'US_Gothic_Romance': 'https://www.amazon.com/gp/bestsellers/digital-text/6487830011/ref=pd_zg_hrsr_digital-text',
-        'US_Rom_Com': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Romantic-Comedy/zgbs/digital-text/6487841011/ref=zg_bs_nav_digital-text_3_6487830011', 
-        'US_Holiday_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Holiday-Romance/zgbs/digital-text/6487831011/ref=zg_bs_nav_digital-text_3_6487841011',
-        'US_Contemporary_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Contemporary-Romance/zgbs/digital-text/158568011/ref=zg_bs_nav_digital-text_3_6487831011',
-        'US_Tudor_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Tudor-Romance/zgbs/digital-text/14530455011/ref=zg_bs_nav_digital-text_4_158571011',
-        'US_Renaissance_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Renaissance-Historical-Romance/zgbs/digital-text/17744543011/ref=zg_bs_nav_digital-text_4_14530455011',
-    }
+    urls = cats_urls()
 
     book_pages = {}
 
@@ -87,6 +72,48 @@ def main():
     logging.info(f'Time end {time_end}')
     logging.info(f'Time taken {time_end - time_start}')
 
+
+
+def cats_urls():
+
+    # the original urls
+    # move away to using json cats
+    urls = {
+            'UK_Hist_Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/362727031/ref=zg_bs_unv_digital-text_4_3507148031_2',
+            'UK_Reg Romance': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Regency-Historical-Romance/zgbs/digital-text/3507148031/ref=zg_bs_nav_digital-text_4_362727031',
+            'US_Hist_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Historical-Romance/zgbs/digital-text/158571011/ref=zg_bs_unv_digital-text_4_158573011_2',
+            'US_Reg_Romance' : 'https://www.amazon.com/Best-Sellers-Regency-Historical-Romance/zgbs/digital-text/158573011',
+            'UK_Womens_Fiction' : 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/4542772031/ref=zg_bs_nav_digital-text_3_362270031',
+            'UK_Womens_Romance_Fiction': 'https://www.amazon.co.uk/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/4542787031/ref=zg_bs_nav_digital-text_4_4542772031',
+            'US_Womens_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Fiction/zgbs/digital-text/6190492011/ref=zg_bs_nav_digital-text_3_157028011',
+            'US_Womens_Rom_Fiction' : 'https://www.amazon.com/Best-Sellers-Kindle-Store-Womens-Romance-Fiction/zgbs/digital-text/7588898011/ref=zg_bs_nav_digital-text_4_6190492011',
+            'US_Gothic_Romance': 'https://www.amazon.com/gp/bestsellers/digital-text/6487830011/ref=pd_zg_hrsr_digital-text',
+            'US_Rom_Com': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Romantic-Comedy/zgbs/digital-text/6487841011/ref=zg_bs_nav_digital-text_3_6487830011', 
+            'US_Holiday_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Holiday-Romance/zgbs/digital-text/6487831011/ref=zg_bs_nav_digital-text_3_6487841011',
+            'US_Contemporary_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Contemporary-Romance/zgbs/digital-text/158568011/ref=zg_bs_nav_digital-text_3_6487831011',
+            'US_Tudor_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Tudor-Romance/zgbs/digital-text/14530455011/ref=zg_bs_nav_digital-text_4_158571011',
+            'US_Renaissance_Romance': 'https://www.amazon.com/Best-Sellers-Kindle-Store-Renaissance-Historical-Romance/zgbs/digital-text/17744543011/ref=zg_bs_nav_digital-text_4_14530455011',
+        }
+
+    def add_root(dic: dict, root: str, country: str = "UK") -> dict:
+        padded = {}
+        for k in dic.keys():
+            if k == "root": continue
+            padded[f'{country} {k}'] =  root +dic[k]
+        return padded 
+
+
+    with open('catagories.json') as f:
+        cats = json.load(f)
+
+
+    root = cats['top_level']['root']
+
+    top_level = add_root(cats['top_level'], root)
+
+    all_urls = {**urls, **top_level}
+
+    return all_urls
 
 
 def get_image_url(img):
